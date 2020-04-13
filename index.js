@@ -3,35 +3,70 @@ const fs = require('fs');
 const http = require('http');
 const url = require('url');
 
-const json =  fs.readFileSync(`${__dirname}/data/data.json`, 'utf-8');
+const json = fs.readFileSync(`${__dirname}/data/data.json`, 'utf-8');
 const laptopData = JSON.parse(json);
 
 //1st part of creating server
 const server = http.createServer((req, res) => {
-
     const pathName = url.parse(req.url, true).pathname;
+    
+    
+
+
     const id = url.parse(req.url, true).query.id;
+    
+     //Products Overview
+	if (pathName === '/products' || pathName === '/') {
+		res.writeHead(200, { 'Content-type': 'text/html' });
+        
+        fs.readFile(`${__dirname}/templates/template-overview.html`, 'utf-8', (err, data) => {
+
+
+         let overviewOutput  = data;
+            
+
+            fs.readFile(`${__dirname}/templates/template-card.html`, 'utf-8', (err, data) => {
+
+                const cardsOutput = laptopData.map(el => replaceTemplate(data, el)).join('');
+                overviewOutput = overviewOutput.replace('{%CARDS%}', cardsOutput);
+
+                res.end(overviewOutput);
+            });
+
+
+		});
 
 
 
-    if(pathName === '/products' || pathName === '/'){
 
-        res.writeHead(200, {'Content-type': 'test/html'});
-        res.end('This is the products page');
+    } 
+    //Laptop Details
+    else if (pathName === '/laptop' && id < laptopData.length) {
+		res.writeHead(200, { 'Content-type': 'text/html' });
 
-    }else if(pathName === '/laptop' && id < laptopData.length){
+		fs.readFile(`${__dirname}/templates/template-laptop.html`, 'utf-8', (err, data) => {
+			const laptop = laptopData[id];
+            const output = replaceTemplate(data, laptop);
 
-        res.writeHead(200, {'Content-type': 'test/html'});
-        res.end( `This is the Laptop page for laptop ${id}!`);
-
-    }else{
-
-        res.writeHead(404, {'Content-type': 'test/html'});
-        res.end('URL was not found on the server!!');
-
+			res.end(output);
+		});
     }
 
+    //Images
 
+    else if((/\.(jpg|jpeg|png|gif)$/i).test(pathName)){
+
+        fs.readFile(`${__dirname}/data/img${pathName}`, (err, data) => {
+            res.writeHead(200, { 'Content-type': 'image/jpg' });
+            res.end(data);
+        });
+
+    }
+    //URL not found 
+    else {
+		res.writeHead(404, { 'Content-type': 'text/html' });
+		res.end('URL was not found on the server!!');
+	}
 });
 
 //2nd part of creating server
@@ -40,6 +75,24 @@ const server = http.createServer((req, res) => {
 //port: 1337 -> standard in node  others:- 3000, 8000
 //ip address:- localhost(127.0.0.1)
 server.listen(1337, '127.0.0.1', () => {
-    console.log('Listening for requests now');
+	console.log('Listening for requests now');
 });
 //in browser try  http://127.0.0.1:1337/
+
+
+
+function replaceTemplate(originalHtml, laptop){
+
+    let output = originalHtml.replace(/{%PRODUCTNAME%}/g, laptop.productName);
+    output = output.replace(/{%IMAGE%}/g, laptop.image);
+    output = output.replace(/{%PRICE%}/g, laptop.price);
+    output = output.replace(/{%SCREEN%}/g, laptop.screen);
+    output = output.replace(/{%CPU%}/g, laptop.cpu);
+    output = output.replace(/{%STORAGE%}/g, laptop.storage);
+    output = output.replace(/{%RAM%}/g, laptop.ram);
+    output = output.replace(/{%DESCRIPTION%}/g, laptop.description);
+    output = output.replace(/{%ID%}/g, laptop.id);
+
+    return output;
+
+}
